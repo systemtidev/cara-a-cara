@@ -12,6 +12,9 @@
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Biblioteca levinha para fazer as cartas escorregarem suavemente -->
+    <script src="https://cdn.jsdelivr.net/npm/@formkit/auto-animate/index.global.js"></script>
 
     <style>
         body { background-color: #0f172a; color: #f1f5f9; }
@@ -22,11 +25,11 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useEffect, useRef } = React;
 
         // ATENÇÃO: No código que você vai colar no GitHub, mude a linha abaixo para:
-         const SPRITE_URL = './sprite.png';
-       // const SPRITE_URL = 'https://d31zra5bs5df64.cloudfront.net/prod/3ExG3vy0V8lYpNqFvHwRYB9FE1g/chat/3KSlyYPc60mJmfRgfoZGIwAHhPd/3KStO57ykZKK1f59iHhCOQJGHMp.png?Expires=1791566361&Key-Pair-Id=K2FT0I8VPJSP5H&Signature=OPnJgcJO71wEtDP8Axa79BgKZlP5YkcNWoCkQ1WZOc7dKbTN0AjhGM97q3rhigEx1ogPHNUmwDlj2GUGYZbJzfYHEBthSPMIGAT7iTrOXCK1Nz7hdiFQuoyAFZopHjuZ2gUyixEYjAPQPV-Mmr4srbBk3qP1kSAUTqoBM3sySs0GMJSLPZtnogO7aPd3IVVX5W42UdAXZKF-QWoX47k8EgltqHDhohq4gRQ6QXnfSswm~6003~IMfPN-PHxw3~6bVrlkueKIm1eJzM1HNqzP6RvJZsf-udQPAGxEILQqNzfNogtiM26~JxYjTEdNOG6jpcsxMyYzDzJr~pQK~lx-mw__'; 
+        // const SPRITE_URL = './sprite.png';
+        const SPRITE_URL = 'https://d31zra5bs5df64.cloudfront.net/prod/3ExG3vy0V8lYpNqFvHwRYB9FE1g/chat/3KSlyYPc60mJmfRgfoZGIwAHhPd/3KStO57ykZKK1f59iHhCOQJGHMp.png?Expires=1791566361&Key-Pair-Id=K2FT0I8VPJSP5H&Signature=OPnJgcJO71wEtDP8Axa79BgKZlP5YkcNWoCkQ1WZOc7dKbTN0AjhGM97q3rhigEx1ogPHNUmwDlj2GUGYZbJzfYHEBthSPMIGAT7iTrOXCK1Nz7hdiFQuoyAFZopHjuZ2gUyixEYjAPQPV-Mmr4srbBk3qP1kSAUTqoBM3sySs0GMJSLPZtnogO7aPd3IVVX5W42UdAXZKF-QWoX47k8EgltqHDhohq4gRQ6QXnfSswm~6003~IMfPN-PHxw3~6bVrlkueKIm1eJzM1HNqzP6RvJZsf-udQPAGxEILQqNzfNogtiM26~JxYjTEdNOG6jpcsxMyYzDzJr~pQK~lx-mw__'; 
 
         const CHARACTERS = [
             { id: 1, nome: "Enzo", col: 0, row: 0 }, { id: 2, nome: "Sofia", col: 1, row: 0 }, { id: 3, nome: "Lucas", col: 2, row: 0 }, { id: 4, nome: "Alice", col: 3, row: 0 }, { id: 5, nome: "Pedro", col: 4, row: 0 },
@@ -55,6 +58,14 @@
             const [eliminated, setEliminated] = useState(new Set());
             const [mySecretCard, setMySecretCard] = useState(null);
             const [isRolling, setIsRolling] = useState(false);
+            const gridRef = useRef(null);
+
+            // Ativa a animação "escorregar" no tabuleiro quando a ordem muda
+            useEffect(() => {
+                if (gridRef.current && typeof autoAnimate !== 'undefined') {
+                    autoAnimate(gridRef.current, { duration: 450, easing: 'ease-in-out' });
+                }
+            }, []);
 
             const drawCard = () => {
                 if (isRolling) return;
@@ -136,7 +147,7 @@
                     </div>
 
                     {/* Game Board */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-w-6xl mx-auto w-full">
+                    <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-w-6xl mx-auto w-full">
                         {sortedCharacters.map((char) => {
                             const isEliminated = eliminated.has(char.id);
                             return (
