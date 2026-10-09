@@ -5,49 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quem é Quem? (Cara a Cara)</title>
     
-    <!-- Tailwind CSS para o estilo -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- React e Babel para a lógica -->
+    <!-- React e Babel -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- CSS AutoAnimate -->
-    <script src="https://cdn.jsdelivr.net/npm/@formkit/auto-animate@0.8.2/index.global.js"></script>
+    <!-- Framer Motion (A biblioteca mágica para flutuar) -->
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
 
     <style>
         body { background-color: #0f172a; color: #f1f5f9; overflow-x: hidden; }
-        
-        /* Estilos base da carta */
-        .card-container {
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-        }
-
-        /* Efeito quando a carta está cinza/eliminada */
-        .grayscale-card { 
-            filter: grayscale(100%) opacity(60%); 
-            transform: scale(0.95); 
-        }
-
-        /* EFEITO DE FLUTUAR: Quando a carta acabou de ser clicada */
-        .floating-card {
-            z-index: 50 !important; /* Joga a carta pra frente de todas as outras */
-            transform: scale(1.1) translateY(-10px) !important; /* Dá um zoom e sobe ela */
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 20px rgba(59, 130, 246, 0.5) !important; /* Sombra grande e brilhante */
-            filter: grayscale(100%) opacity(90%) !important; /* Fica cinza, mas bem visível */
-        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+        const { useState, useEffect } = React;
+        
+        // Pega os componentes de animação com segurança
+        const MotionDiv = window.FramerMotion ? window.FramerMotion.motion.div : 'div';
 
-        const SPRITE_URL = './sprite.png'; no seu GitHub
-       
+        // Puxando a imagem direto da sua pasta do GitHub (não vai mais expirar!)
+        const SPRITE_URL = './sprite.png';
 
         const CHARACTERS = [
             { id: 1, nome: "Enzo", col: 0, row: 0 }, { id: 2, nome: "Sofia", col: 1, row: 0 }, { id: 3, nome: "Lucas", col: 2, row: 0 }, { id: 4, nome: "Alice", col: 3, row: 0 }, { id: 5, nome: "Pedro", col: 4, row: 0 },
@@ -76,17 +59,7 @@
             const [eliminated, setEliminated] = useState(new Set());
             const [mySecretCard, setMySecretCard] = useState(null);
             const [isRolling, setIsRolling] = useState(false);
-            
-            // Estado para controlar qual carta está "voando" agora
-            const [flyingCardId, setFlyingCardId] = useState(null);
-            
-            const gridRef = useRef(null);
-
-            useEffect(() => {
-                if (gridRef.current && window.autoAnimate) {
-                    window.autoAnimate(gridRef.current, { duration: 500, easing: 'ease-in-out' });
-                }
-            }, []);
+            const [flyingCardId, setFlyingCardId] = useState(null); // Sabe quem está voando
 
             const drawCard = () => {
                 if (isRolling) return;
@@ -106,17 +79,15 @@
             const toggleEliminate = (id) => {
                 const isEliminating = !eliminated.has(id);
                 
-                // Se estiver eliminando, aciona o efeito de voo
                 if (isEliminating) {
                     setFlyingCardId(id);
-                    
-                    // Tira o efeito de voo depois que a animação terminar (500ms)
+                    // Deixa a carta voar por meio segundo antes de soltar no lugar
                     setTimeout(() => {
                         setFlyingCardId(null);
                     }, 500);
                 }
 
-                // Atualiza o estado
+                // Atualiza a lista imediatamente para o tabuleiro calcular o novo espaço
                 const newEliminated = new Set(eliminated);
                 if (isEliminating) {
                     newEliminated.add(id);
@@ -132,10 +103,10 @@
                 setFlyingCardId(null);
             };
 
+            // MÁGICA DA ORDENAÇÃO
             const sortedCharacters = [...CHARACTERS].sort((a, b) => {
                 const aElim = eliminated.has(a.id);
                 const bElim = eliminated.has(b.id);
-                
                 if (aElim && !bElim) return 1;
                 if (!aElim && bElim) return -1;
                 return a.id - b.id;
@@ -143,6 +114,7 @@
 
             return (
                 <div className="flex flex-col min-h-screen p-4">
+                    {/* Header */}
                     <div className="flex flex-col md:flex-row justify-between items-center bg-slate-800 p-4 rounded-xl shadow-lg mb-6 border border-slate-700 relative z-10">
                         <div>
                             <h1 className="text-2xl font-bold text-blue-400">👤 Quem é Quem?</h1>
@@ -169,6 +141,7 @@
                         </div>
                     </div>
 
+                    {/* Barra de Status */}
                     <div className="flex justify-between items-center mb-4 relative z-10">
                         <div className="text-sm bg-slate-800 py-1 px-3 rounded-full border border-slate-700">
                             Restantes: <span className="font-bold text-blue-400">{25 - eliminated.size}</span>/25
@@ -178,39 +151,43 @@
                         </button>
                     </div>
 
-                    <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-w-6xl mx-auto w-full pb-10">
+                    {/* Tabuleiro Mágico */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-w-6xl mx-auto w-full pb-10">
                         {sortedCharacters.map((char) => {
                             const isEliminated = eliminated.has(char.id);
                             const isFlying = flyingCardId === char.id;
-                            
-                            // Define as classes baseado no estado atual da carta
-                            let cardClasses = "card-container cursor-pointer select-none ";
-                            
-                            if (isFlying) {
-                                cardClasses += "floating-card"; // Voando pra baixo
-                            } else if (isEliminated) {
-                                cardClasses += "grayscale-card z-0"; // Já tá lá embaixo
-                            } else {
-                                cardClasses += "hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/20 z-10"; // Ativa e esperando clique
-                            }
 
                             return (
-                                <div 
+                                <MotionDiv
                                     key={char.id}
+                                    layout // Faz a carta deslizar de um ponto ao outro automaticamente
                                     onClick={() => toggleEliminate(char.id)}
-                                    className={cardClasses}
+                                    initial={false}
+                                    animate={{
+                                        scale: isFlying ? 1.15 : isEliminated ? 0.95 : 1, // Dá zoom quando voa, encolhe quando morre
+                                        zIndex: isFlying ? 50 : isEliminated ? 0 : 10, // Passa na frente de tudo se estiver voando
+                                        y: isFlying ? -20 : 0, // Sobe na tela
+                                        opacity: isEliminated && !isFlying ? 0.5 : 1, // Fica meio transparente no final
+                                        filter: isEliminated || isFlying ? 'grayscale(100%)' : 'grayscale(0%)', // Fica cinza
+                                        boxShadow: isFlying ? '0 25px 50px -12px rgba(0,0,0,0.8), 0 0 30px rgba(59,130,246,0.6)' : 'none' // Brilho Azul
+                                    }}
+                                    transition={{ 
+                                        layout: { type: 'spring', stiffness: 250, damping: 25 },
+                                        default: { duration: 0.3 }
+                                    }}
+                                    className={`relative cursor-pointer select-none rounded-xl ${!isEliminated && !isFlying ? 'hover:-translate-y-1 hover:shadow-lg transition-transform' : ''}`}
                                 >
                                     <div className={`bg-slate-800 rounded-xl overflow-hidden border-2 flex flex-col aspect-square w-full h-full ${isEliminated || isFlying ? 'border-slate-700' : 'border-slate-600'}`}>
                                         <div className="w-full h-full relative bg-slate-800 p-1">
                                             <SpriteAvatar {...char} />
                                         </div>
-                                        {isEliminated && (
+                                        {(isEliminated || isFlying) && (
                                             <div className="absolute inset-0 bg-red-900/30 flex items-center justify-center rounded-xl">
                                                 <div className="text-white text-4xl drop-shadow-lg font-bold">❌</div>
                                             </div>
                                         )}
                                     </div>
-                                </div>
+                                </MotionDiv>
                             );
                         })}
                     </div>
