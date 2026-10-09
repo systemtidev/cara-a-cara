@@ -13,7 +13,7 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Framer Motion (o global dessa biblioteca se chama "Motion") -->
+    <!-- Framer Motion -->
     <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
 
     <style>
@@ -26,8 +26,6 @@
     <script type="text/babel">
         const { useState, useRef } = React;
 
-        // CORREÇÃO PRINCIPAL: a biblioteca expõe window.Motion (e não window.FramerMotion).
-        // Antes, o código caía no fallback 'div' e nenhuma animação acontecia.
         const FM = window.Motion || window.FramerMotion;
         const MotionDiv = FM ? FM.motion.div : 'div';
 
@@ -46,7 +44,7 @@
             const bgPosY = row * 25;
             return (
                 <div
-                    className="w-full h-full bg-no-repeat rounded-lg"
+                    className="w-full h-full bg-no-repeat"
                     style={{
                         backgroundImage: `url('${SPRITE_URL}')`,
                         backgroundSize: "500% 500%",
@@ -56,14 +54,13 @@
             );
         };
 
-        // Tempo máximo que a carta fica "levitando" (segurança caso a animação não dispare o evento de fim)
         const MAX_FLY_MS = 1400;
 
         function App() {
             const [eliminated, setEliminated] = useState(new Set());
             const [mySecretCard, setMySecretCard] = useState(null);
             const [isRolling, setIsRolling] = useState(false);
-            const [flying, setFlying] = useState(new Set()); // cartas que estão levitando agora
+            const [flying, setFlying] = useState(new Set()); 
             const timers = useRef({});
 
             const startFlying = (id) => {
@@ -97,7 +94,7 @@
             };
 
             const toggleEliminate = (id) => {
-                startFlying(id); // levita tanto ao eliminar quanto ao restaurar
+                startFlying(id); 
 
                 setEliminated((prev) => {
                     const next = new Set(prev);
@@ -113,7 +110,6 @@
                 setFlying(new Set());
             };
 
-            // Eliminadas vão para o final da lista; o resto mantém a ordem original
             const sortedCharacters = [...CHARACTERS].sort((a, b) => {
                 const aElim = eliminated.has(a.id);
                 const bElim = eliminated.has(b.id);
@@ -146,7 +142,7 @@
                                 disabled={isRolling}
                                 className={`w-28 h-32 rounded-lg border-2 flex items-center justify-center bg-slate-800 overflow-hidden cursor-pointer ${!mySecretCard ? 'border-dashed border-slate-500' : 'border-blue-500 shadow-md shadow-blue-500/30'}`}
                             >
-                                {!mySecretCard ? <span className="text-2xl animate-pulse">❓</span> : <SpriteAvatar {...mySecretCard} />}
+                                {!mySecretCard ? <span className="text-2xl animate-pulse">❓</span> : <div className="w-full h-full p-1"><SpriteAvatar {...mySecretCard} /></div>}
                             </button>
                         </div>
                     </div>
@@ -170,11 +166,10 @@
                             return (
                                 <MotionDiv
                                     key={char.id}
-                                    layout // desliza sozinha até a nova posição; as outras se reorganizam
+                                    layout
                                     onClick={() => toggleEliminate(char.id)}
                                     onLayoutAnimationComplete={() => stopFlying(char.id)}
                                     initial={false}
-                                    // zIndex fica no style (valor imediato) para a carta já sair por cima de todas
                                     style={{ position: 'relative', zIndex: isFlying ? 50 : 1 }}
                                     animate={{
                                         scale: isFlying ? 1.12 : isEliminated ? 0.95 : 1,
@@ -185,14 +180,14 @@
                                             : '0 0 0 0 rgba(0,0,0,0)'
                                     }}
                                     transition={{
-                                       // layout: { type: 'spring', stiffness: 120, damping: 20, mass: 1 }, // mais lento = efeito de levitar
                                         layout: { duration: 1.2, ease: 'easeInOut' },
                                         default: { duration: 0.35 }
                                     }}
                                     className="cursor-pointer select-none rounded-xl"
                                 >
-                                    <div className={`bg-slate-800 rounded-xl overflow-hidden border-2 flex flex-col aspect-square w-full h-full relative ${isEliminated ? 'border-slate-700' : 'border-slate-600'}`}>
-                                        <div className="w-full h-full relative bg-slate-800 p-1">
+                                    {/* Removido o p-1 daqui de dentro para a imagem preencher 100% */}
+                                    <div className={`bg-transparent rounded-xl overflow-hidden border-2 flex flex-col aspect-square w-full h-full relative ${isEliminated ? 'border-slate-700' : 'border-slate-600'}`}>
+                                        <div className="w-full h-full relative">
                                             <SpriteAvatar {...char} />
                                         </div>
                                         {isEliminated && (
