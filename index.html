@@ -185,7 +185,8 @@
                                             : '0 0 0 0 rgba(0,0,0,0)'
                                     }}
                                     transition={{
-                                        layout: { type: 'spring', stiffness: 120, damping: 20, mass: 1 }, // mais lento = efeito de levitar
+                                       // layout: { type: 'spring', stiffness: 120, damping: 20, mass: 1 }, // mais lento = efeito de levitar
+                                        layout: { duration: 1.2, ease: 'easeInOut' },
                                         default: { duration: 0.35 }
                                     }}
                                     className="cursor-pointer select-none rounded-xl"
