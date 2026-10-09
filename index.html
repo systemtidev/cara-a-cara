@@ -13,24 +13,41 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- Framer Motion para animações super suaves e fluidas no React -->
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <!-- CSS AutoAnimate -->
+    <script src="https://cdn.jsdelivr.net/npm/@formkit/auto-animate@0.8.2/index.global.js"></script>
 
     <style>
-        body { background-color: #0f172a; color: #f1f5f9; }
-        .grayscale-card { filter: grayscale(100%) opacity(40%); transform: scale(0.95); }
+        body { background-color: #0f172a; color: #f1f5f9; overflow-x: hidden; }
+        
+        /* Estilos base da carta */
+        .card-container {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        /* Efeito quando a carta está cinza/eliminada */
+        .grayscale-card { 
+            filter: grayscale(100%) opacity(60%); 
+            transform: scale(0.95); 
+        }
+
+        /* EFEITO DE FLUTUAR: Quando a carta acabou de ser clicada */
+        .floating-card {
+            z-index: 50 !important; /* Joga a carta pra frente de todas as outras */
+            transform: scale(1.1) translateY(-10px) !important; /* Dá um zoom e sobe ela */
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 20px rgba(59, 130, 246, 0.5) !important; /* Sombra grande e brilhante */
+            filter: grayscale(100%) opacity(90%) !important; /* Fica cinza, mas bem visível */
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
-        const { motion, AnimatePresence } = window.Motion;
+        const { useState, useEffect, useRef } = React;
 
-        // ATENÇÃO: No código que você vai colar no GitHub, mude a linha abaixo para:
-         const SPRITE_URL = './sprite.png';
-       // const SPRITE_URL = 'https://d31zra5bs5df64.cloudfront.net/prod/3ExG3vy0V8lYpNqFvHwRYB9FE1g/chat/3KSlyYPc60mJmfRgfoZGIwAHhPd/3KStO57ykZKK1f59iHhCOQJGHMp.png?Expires=1791566361&Key-Pair-Id=K2FT0I8VPJSP5H&Signature=OPnJgcJO71wEtDP8Axa79BgKZlP5YkcNWoCkQ1WZOc7dKbTN0AjhGM97q3rhigEx1ogPHNUmwDlj2GUGYZbJzfYHEBthSPMIGAT7iTrOXCK1Nz7hdiFQuoyAFZopHjuZ2gUyixEYjAPQPV-Mmr4srbBk3qP1kSAUTqoBM3sySs0GMJSLPZtnogO7aPd3IVVX5W42UdAXZKF-QWoX47k8EgltqHDhohq4gRQ6QXnfSswm~6003~IMfPN-PHxw3~6bVrlkueKIm1eJzM1HNqzP6RvJZsf-udQPAGxEILQqNzfNogtiM26~JxYjTEdNOG6jpcsxMyYzDzJr~pQK~lx-mw__'; 
+        const SPRITE_URL = './sprite.png'; no seu GitHub
+       
 
         const CHARACTERS = [
             { id: 1, nome: "Enzo", col: 0, row: 0 }, { id: 2, nome: "Sofia", col: 1, row: 0 }, { id: 3, nome: "Lucas", col: 2, row: 0 }, { id: 4, nome: "Alice", col: 3, row: 0 }, { id: 5, nome: "Pedro", col: 4, row: 0 },
@@ -59,6 +76,17 @@
             const [eliminated, setEliminated] = useState(new Set());
             const [mySecretCard, setMySecretCard] = useState(null);
             const [isRolling, setIsRolling] = useState(false);
+            
+            // Estado para controlar qual carta está "voando" agora
+            const [flyingCardId, setFlyingCardId] = useState(null);
+            
+            const gridRef = useRef(null);
+
+            useEffect(() => {
+                if (gridRef.current && window.autoAnimate) {
+                    window.autoAnimate(gridRef.current, { duration: 500, easing: 'ease-in-out' });
+                }
+            }, []);
 
             const drawCard = () => {
                 if (isRolling) return;
@@ -76,11 +104,24 @@
             };
 
             const toggleEliminate = (id) => {
+                const isEliminating = !eliminated.has(id);
+                
+                // Se estiver eliminando, aciona o efeito de voo
+                if (isEliminating) {
+                    setFlyingCardId(id);
+                    
+                    // Tira o efeito de voo depois que a animação terminar (500ms)
+                    setTimeout(() => {
+                        setFlyingCardId(null);
+                    }, 500);
+                }
+
+                // Atualiza o estado
                 const newEliminated = new Set(eliminated);
-                if (newEliminated.has(id)) {
-                    newEliminated.delete(id);
-                } else {
+                if (isEliminating) {
                     newEliminated.add(id);
+                } else {
+                    newEliminated.delete(id);
                 }
                 setEliminated(newEliminated);
             };
@@ -88,9 +129,9 @@
             const resetGame = () => {
                 setEliminated(new Set());
                 setMySecretCard(null);
+                setFlyingCardId(null);
             };
 
-            // Ordenação: Cartas ativas primeiro, eliminadas por último
             const sortedCharacters = [...CHARACTERS].sort((a, b) => {
                 const aElim = eliminated.has(a.id);
                 const bElim = eliminated.has(b.id);
@@ -102,8 +143,7 @@
 
             return (
                 <div className="flex flex-col min-h-screen p-4">
-                    {/* Header */}
-                    <div className="flex flex-col md:flex-row justify-between items-center bg-slate-800 p-4 rounded-xl shadow-lg mb-6 border border-slate-700">
+                    <div className="flex flex-col md:flex-row justify-between items-center bg-slate-800 p-4 rounded-xl shadow-lg mb-6 border border-slate-700 relative z-10">
                         <div>
                             <h1 className="text-2xl font-bold text-blue-400">👤 Quem é Quem?</h1>
                             <p className="text-sm text-slate-400 mt-1">
@@ -129,8 +169,7 @@
                         </div>
                     </div>
 
-                    {/* Action Bar */}
-                    <div className="flex justify-between items-center mb-4">
+                    <div className="flex justify-between items-center mb-4 relative z-10">
                         <div className="text-sm bg-slate-800 py-1 px-3 rounded-full border border-slate-700">
                             Restantes: <span className="font-bold text-blue-400">{25 - eliminated.size}</span>/25
                         </div>
@@ -139,36 +178,42 @@
                         </button>
                     </div>
 
-                    {/* Game Board animado com Framer Motion */}
-                    <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-w-6xl mx-auto w-full">
-                        <AnimatePresence>
-                            {sortedCharacters.map((char) => {
-                                const isEliminated = eliminated.has(char.id);
-                                return (
-                                    <motion.div 
-                                        layout // Essa é a linha que faz a carta "escorregar" para a nova posição!
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                                        key={char.id}
-                                        onClick={() => toggleEliminate(char.id)}
-                                        className={`relative cursor-pointer select-none transition-all duration-300 ${isEliminated ? 'grayscale-card' : 'hover:-translate-y-1'}`}
-                                    >
-                                        <div className={`bg-slate-800 rounded-xl overflow-hidden border-2 flex flex-col aspect-square ${isEliminated ? 'border-slate-700' : 'border-slate-600'}`}>
-                                            <div className="w-full h-full relative bg-slate-800 p-1">
-                                                <SpriteAvatar {...char} />
-                                            </div>
-                                            {isEliminated && (
-                                                <div className="absolute inset-0 bg-red-900/30 flex items-center justify-center">
-                                                    <div className="text-white text-4xl drop-shadow-lg">❌</div>
-                                                </div>
-                                            )}
+                    <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-w-6xl mx-auto w-full pb-10">
+                        {sortedCharacters.map((char) => {
+                            const isEliminated = eliminated.has(char.id);
+                            const isFlying = flyingCardId === char.id;
+                            
+                            // Define as classes baseado no estado atual da carta
+                            let cardClasses = "card-container cursor-pointer select-none ";
+                            
+                            if (isFlying) {
+                                cardClasses += "floating-card"; // Voando pra baixo
+                            } else if (isEliminated) {
+                                cardClasses += "grayscale-card z-0"; // Já tá lá embaixo
+                            } else {
+                                cardClasses += "hover:-translate-y-1 hover:shadow-lg hover:shadow-blue-500/20 z-10"; // Ativa e esperando clique
+                            }
+
+                            return (
+                                <div 
+                                    key={char.id}
+                                    onClick={() => toggleEliminate(char.id)}
+                                    className={cardClasses}
+                                >
+                                    <div className={`bg-slate-800 rounded-xl overflow-hidden border-2 flex flex-col aspect-square w-full h-full ${isEliminated || isFlying ? 'border-slate-700' : 'border-slate-600'}`}>
+                                        <div className="w-full h-full relative bg-slate-800 p-1">
+                                            <SpriteAvatar {...char} />
                                         </div>
-                                    </motion.div>
-                                );
-                            })}
-                        </AnimatePresence>
-                    </motion.div>
+                                        {isEliminated && (
+                                            <div className="absolute inset-0 bg-red-900/30 flex items-center justify-center rounded-xl">
+                                                <div className="text-white text-4xl drop-shadow-lg font-bold">❌</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
                 </div>
             );
         }
