@@ -39,18 +39,25 @@
             { id: 21, nome: "Gabriel", col: 0, row: 4 }, { id: 22, nome: "Vitória", col: 1, row: 4 }, { id: 23, nome: "Arthur", col: 2, row: 4 }, { id: 24, nome: "Elisa", col: 3, row: 4 }, { id: 25, nome: "Miguel", col: 4, row: 4 }
         ];
 
+        // NOVO CÓDIGO DA CARTA: À Prova de Falhas
         const SpriteAvatar = ({ col, row }) => {
-            // Matemática Pura: Sem gambiarras, 25% exato para cada carta!
             return (
-                <div className="w-full h-full overflow-hidden">
-                    <div
-                        className="w-full h-full bg-no-repeat"
-                        style={{
-                            backgroundImage: `url('${SPRITE_URL}')`,
-                            backgroundSize: "500% 500%",
-                            backgroundPosition: `${col * 25}% ${row * 25}%`
-                        }}
-                    ></div>
+                <div className="w-full h-full relative overflow-hidden rounded-lg">
+                    {/* Esse zoom de 2.5% impede que o pixel da carta do vizinho vaze */}
+                    <div className="w-full h-full relative origin-center" style={{ transform: 'scale(1.025)' }}>
+                        <img
+                            src={SPRITE_URL}
+                            alt="Personagem"
+                            /* max-w-none é essencial para o Tailwind permitir que a imagem cresça além da caixa */
+                            className="absolute max-w-none pointer-events-none"
+                            style={{
+                                width: '500%',
+                                height: '500%',
+                                left: `-${col * 100}%`,
+                                top: `-${row * 100}%`
+                            }}
+                        />
+                    </div>
                 </div>
             );
         };
@@ -185,7 +192,6 @@
                                     }}
                                     className="cursor-pointer select-none"
                                 >
-                                    {/* Mudei de rounded-xl para rounded-lg aqui, para não cortar o nome na curva! */}
                                     <div className={`rounded-lg overflow-hidden border-2 flex flex-col aspect-square w-full h-full relative ${isEliminated ? 'border-slate-700' : 'border-slate-500'}`}>
                                         <div className="w-full h-full relative">
                                             <SpriteAvatar {...char} />
