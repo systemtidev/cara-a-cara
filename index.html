@@ -5,359 +5,211 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quem é Quem? (Cara a Cara)</title>
 
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- React e Babel -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Framer Motion (o global dessa biblioteca se chama "Motion") -->
     <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
 
     <style>
-        * { box-sizing: border-box; }
-
-        body {
-            background: #0f172a;
-            color: #f1f5f9;
-            margin: 0;
-            overflow-x: hidden;
-        }
-
-        .board { position: relative; isolation: isolate; }
-
-        .character-card {
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        .flying-card {
-            position: fixed !important;
-            margin: 0 !important;
-            pointer-events: none !important;
-            z-index: 99999 !important;
-            transform-origin: center center;
-            will-change: transform;
-        }
+        body { background-color: #0f172a; color: #f1f5f9; overflow-x: hidden; }
     </style>
 </head>
-
 <body>
-<div id="root"></div>
+    <div id="root"></div>
 
-<script type="text/babel">
-const { useState, useRef, useEffect } = React;
-const { motion } = window.FramerMotion;
+    <script type="text/babel">
+        const { useState, useRef } = React;
 
-const SPRITE_URL = './sprite.png';
+        // CORREÇÃO PRINCIPAL: a biblioteca expõe window.Motion (e não window.FramerMotion).
+        // Antes, o código caía no fallback 'div' e nenhuma animação acontecia.
+        const FM = window.Motion || window.FramerMotion;
+        const MotionDiv = FM ? FM.motion.div : 'div';
 
-const CHARACTERS = [
-    { id: 1, nome: "Enzo", col: 0, row: 0 },
-    { id: 2, nome: "Sofia", col: 1, row: 0 },
-    { id: 3, nome: "Lucas", col: 2, row: 0 },
-    { id: 4, nome: "Alice", col: 3, row: 0 },
-    { id: 5, nome: "Pedro", col: 4, row: 0 },
-    { id: 6, nome: "Laura", col: 0, row: 1 },
-    { id: 7, nome: "Felipe", col: 1, row: 1 },
-    { id: 8, nome: "Camila", col: 2, row: 1 },
-    { id: 9, nome: "Henrique", col: 3, row: 1 },
-    { id: 10, nome: "Beatriz", col: 4, row: 1 },
-    { id: 11, nome: "Matheus", col: 0, row: 2 },
-    { id: 12, nome: "Isabela", col: 1, row: 2 },
-    { id: 13, nome: "Bruno", col: 2, row: 2 },
-    { id: 14, nome: "Larissa", col: 3, row: 2 },
-    { id: 15, nome: "Gustavo", col: 4, row: 2 },
-    { id: 16, nome: "Aline", col: 0, row: 3 },
-    { id: 17, nome: "Daniel", col: 1, row: 3 },
-    { id: 18, nome: "Renata", col: 2, row: 3 },
-    { id: 19, nome: "Carlos", col: 3, row: 3 },
-    { id: 20, nome: "Paula", col: 4, row: 3 },
-    { id: 21, nome: "Gabriel", col: 0, row: 4 },
-    { id: 22, nome: "Vitória", col: 1, row: 4 },
-    { id: 23, nome: "Arthur", col: 2, row: 4 },
-    { id: 24, nome: "Elisa", col: 3, row: 4 },
-    { id: 25, nome: "Miguel", col: 4, row: 4 }
-];
+        const SPRITE_URL = './sprite.png';
 
-function SpriteAvatar({ col, row }) {
-    return (
-        <div
-            className="w-full h-full bg-no-repeat rounded-lg"
-            style={{
-                backgroundImage: `url('${SPRITE_URL}')`,
-                backgroundSize: "500% 500%",
-                backgroundPosition: `${col * 25}% ${row * 25}%`
-            }}
-        />
-    );
-}
+        const CHARACTERS = [
+            { id: 1, nome: "Enzo", col: 0, row: 0 }, { id: 2, nome: "Sofia", col: 1, row: 0 }, { id: 3, nome: "Lucas", col: 2, row: 0 }, { id: 4, nome: "Alice", col: 3, row: 0 }, { id: 5, nome: "Pedro", col: 4, row: 0 },
+            { id: 6, nome: "Laura", col: 0, row: 1 }, { id: 7, nome: "Felipe", col: 1, row: 1 }, { id: 8, nome: "Camila", col: 2, row: 1 }, { id: 9, nome: "Henrique", col: 3, row: 1 }, { id: 10, nome: "Beatriz", col: 4, row: 1 },
+            { id: 11, nome: "Matheus", col: 0, row: 2 }, { id: 12, nome: "Isabela", col: 1, row: 2 }, { id: 13, nome: "Bruno", col: 2, row: 2 }, { id: 14, nome: "Larissa", col: 3, row: 2 }, { id: 15, nome: "Gustavo", col: 4, row: 2 },
+            { id: 16, nome: "Aline", col: 0, row: 3 }, { id: 17, nome: "Daniel", col: 1, row: 3 }, { id: 18, nome: "Renata", col: 2, row: 3 }, { id: 19, nome: "Carlos", col: 3, row: 3 }, { id: 20, nome: "Paula", col: 4, row: 3 },
+            { id: 21, nome: "Gabriel", col: 0, row: 4 }, { id: 22, nome: "Vitória", col: 1, row: 4 }, { id: 23, nome: "Arthur", col: 2, row: 4 }, { id: 24, nome: "Elisa", col: 3, row: 4 }, { id: 25, nome: "Miguel", col: 4, row: 4 }
+        ];
 
-function App() {
-    const [eliminated, setEliminated] = useState(new Set());
-    const [mySecretCard, setMySecretCard] = useState(null);
-    const [isRolling, setIsRolling] = useState(false);
-    const [flyingCardId, setFlyingCardId] = useState(null);
-
-    const cardRefs = useRef({});
-    const busyRef = useRef(false);
-    const animationRef = useRef(null);
-    const timersRef = useRef([]);
-
-    useEffect(() => {
-        return () => {
-            timersRef.current.forEach(clearTimeout);
-            if (animationRef.current) animationRef.current.cancel();
-        };
-    }, []);
-
-    function drawCard() {
-        if (isRolling) return;
-        setIsRolling(true);
-
-        let count = 0;
-        const interval = setInterval(() => {
-            setMySecretCard(
-                CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)]
+        const SpriteAvatar = ({ col, row }) => {
+            const bgPosX = col * 25;
+            const bgPosY = row * 25;
+            return (
+                <div
+                    className="w-full h-full bg-no-repeat rounded-lg"
+                    style={{
+                        backgroundImage: `url('${SPRITE_URL}')`,
+                        backgroundSize: "500% 500%",
+                        backgroundPosition: `${bgPosX}% ${bgPosY}%`
+                    }}
+                ></div>
             );
+        };
 
-            count++;
-            if (count >= 16) {
-                clearInterval(interval);
-                setIsRolling(false);
-            }
-        }, 100);
-    }
+        // Tempo máximo que a carta fica "levitando" (segurança caso a animação não dispare o evento de fim)
+        const MAX_FLY_MS = 1400;
 
-    async function toggleEliminate(id) {
-        if (busyRef.current) return;
+        function App() {
+            const [eliminated, setEliminated] = useState(new Set());
+            const [mySecretCard, setMySecretCard] = useState(null);
+            const [isRolling, setIsRolling] = useState(false);
+            const [flying, setFlying] = useState(new Set()); // cartas que estão levitando agora
+            const timers = useRef({});
 
-        if (eliminated.has(id)) {
-            setEliminated(previous => {
-                const next = new Set(previous);
-                next.delete(id);
-                return next;
+            const startFlying = (id) => {
+                setFlying((prev) => new Set(prev).add(id));
+                clearTimeout(timers.current[id]);
+                timers.current[id] = setTimeout(() => stopFlying(id), MAX_FLY_MS);
+            };
+
+            const stopFlying = (id) => {
+                clearTimeout(timers.current[id]);
+                setFlying((prev) => {
+                    if (!prev.has(id)) return prev;
+                    const next = new Set(prev);
+                    next.delete(id);
+                    return next;
+                });
+            };
+
+            const drawCard = () => {
+                if (isRolling) return;
+                setIsRolling(true);
+                let counter = 0;
+                const interval = setInterval(() => {
+                    setMySecretCard(CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)]);
+                    counter++;
+                    if (counter > 15) {
+                        clearInterval(interval);
+                        setIsRolling(false);
+                    }
+                }, 100);
+            };
+
+            const toggleEliminate = (id) => {
+                startFlying(id); // levita tanto ao eliminar quanto ao restaurar
+
+                setEliminated((prev) => {
+                    const next = new Set(prev);
+                    next.has(id) ? next.delete(id) : next.add(id);
+                    return next;
+                });
+            };
+
+            const resetGame = () => {
+                Object.values(timers.current).forEach(clearTimeout);
+                setEliminated(new Set());
+                setMySecretCard(null);
+                setFlying(new Set());
+            };
+
+            // Eliminadas vão para o final da lista; o resto mantém a ordem original
+            const sortedCharacters = [...CHARACTERS].sort((a, b) => {
+                const aElim = eliminated.has(a.id);
+                const bElim = eliminated.has(b.id);
+                if (aElim && !bElim) return 1;
+                if (!aElim && bElim) return -1;
+                return a.id - b.id;
             });
-            return;
-        }
 
-        const original = cardRefs.current[id];
+            return (
+                <div className="flex flex-col min-h-screen p-4">
+                    {/* Header */}
+                    <div className="flex flex-col md:flex-row justify-between items-center bg-slate-800 p-4 rounded-xl shadow-lg mb-6 border border-slate-700 relative z-10">
+                        <div>
+                            <h1 className="text-2xl font-bold text-blue-400">👤 Quem é Quem?</h1>
+                            <p className="text-sm text-slate-400 mt-1">
+                                <span className="text-red-400 font-semibold">Regra de Ouro:</span> É proibido perguntar se é Homem ou Mulher!
+                            </p>
+                        </div>
 
-        if (!original) {
-            setEliminated(previous => new Set([...previous, id]));
-            return;
-        }
+                        <div className="mt-4 md:mt-0 flex items-center bg-slate-900 p-3 rounded-xl border border-slate-700">
+                            <div className="mr-4 text-right">
+                                <span className="block text-xs uppercase text-slate-400 font-semibold">Sua carta secreta</span>
+                                <span className="block text-sm text-slate-300">
+                                    {!mySecretCard ? "Não sorteada" : isRolling ? "Sorteando..." : "Sorteada!"}
+                                </span>
+                            </div>
 
-        busyRef.current = true;
-
-        const rect = original.getBoundingClientRect();
-        const clone = original.cloneNode(true);
-
-        clone.classList.add('flying-card');
-        Object.assign(clone.style, {
-            left: `${rect.left}px`,
-            top: `${rect.top}px`,
-            width: `${rect.width}px`,
-            height: `${rect.height}px`,
-            opacity: '1',
-            filter: 'grayscale(100%)',
-            transform: 'translate(0, 0) scale(1)',
-            boxShadow: '0 12px 25px rgba(0,0,0,.4)'
-        });
-
-        document.body.appendChild(clone);
-        setFlyingCardId(id);
-
-        // Destino visual: parte superior da tela.
-        const targetX = Math.max(
-            10,
-            window.innerWidth - rect.width - 20
-        );
-        const targetY = Math.max(
-            10,
-            Math.min(window.innerHeight * 0.12, window.innerHeight - rect.height - 10)
-        );
-
-        const dx = targetX - rect.left;
-        const dy = targetY - rect.top;
-
-        const animation = clone.animate([
-            {
-                transform: 'translate(0,0) scale(1) rotate(0deg)',
-                offset: 0
-            },
-            {
-                transform: 'translate(0,-35px) scale(1.12) rotate(-3deg)',
-                boxShadow: '0 30px 45px rgba(0,0,0,.65)',
-                offset: 0.22
-            },
-            {
-                transform: `translate(${dx}px,${dy}px) scale(1.08) rotate(3deg)`,
-                boxShadow: '0 30px 50px rgba(0,0,0,.65)',
-                offset: 0.72
-            },
-            {
-                transform: `translate(${dx}px,${dy}px) scale(1) rotate(0deg)`,
-                boxShadow: '0 8px 18px rgba(0,0,0,.3)',
-                offset: 1
-            }
-        ], {
-            duration: 700,
-            easing: 'cubic-bezier(.22,1,.36,1)',
-            fill: 'forwards'
-        });
-
-        animationRef.current = animation;
-
-        try {
-            await animation.finished;
-        } catch (e) {}
-
-        clone.remove();
-        animationRef.current = null;
-
-        setEliminated(previous => new Set([...previous, id]));
-        setFlyingCardId(null);
-
-        const timer = setTimeout(() => {
-            busyRef.current = false;
-        }, 500);
-
-        timersRef.current.push(timer);
-    }
-
-    function resetGame() {
-        if (busyRef.current) return;
-        setEliminated(new Set());
-        setMySecretCard(null);
-        setFlyingCardId(null);
-    }
-
-    const sortedCharacters = [...CHARACTERS].sort((a, b) => {
-        const aOut = eliminated.has(a.id);
-        const bOut = eliminated.has(b.id);
-
-        if (aOut && !bOut) return 1;
-        if (!aOut && bOut) return -1;
-        return a.id - b.id;
-    });
-
-    return (
-        <div className="flex flex-col min-h-screen p-4">
-
-            <header className="flex flex-col md:flex-row justify-between items-center bg-slate-800 p-4 rounded-xl shadow-lg mb-6 border border-slate-700 relative z-10">
-                <div>
-                    <h1 className="text-2xl font-bold text-blue-400">
-                        👤 Quem é Quem?
-                    </h1>
-                    <p className="text-sm text-slate-400 mt-1">
-                        <span className="text-red-400 font-semibold">
-                            Regra de Ouro:
-                        </span>{' '}
-                        É proibido perguntar se é Homem ou Mulher!
-                    </p>
-                </div>
-
-                <div className="mt-4 md:mt-0 flex items-center bg-slate-900 p-3 rounded-xl border border-slate-700">
-                    <div className="mr-4 text-right">
-                        <span className="block text-xs uppercase text-slate-400 font-semibold">
-                            Sua carta secreta
-                        </span>
-                        <span className="block text-sm text-slate-300">
-                            {!mySecretCard
-                                ? "Não sorteada"
-                                : isRolling
-                                ? "Sorteando..."
-                                : "Sorteada!"}
-                        </span>
+                            <button
+                                onClick={drawCard}
+                                disabled={isRolling}
+                                className={`w-16 h-20 rounded-lg border-2 flex items-center justify-center bg-slate-800 overflow-hidden cursor-pointer ${!mySecretCard ? 'border-dashed border-slate-500' : 'border-blue-500 shadow-md shadow-blue-500/30'}`}
+                            >
+                                {!mySecretCard ? <span className="text-2xl animate-pulse">❓</span> : <SpriteAvatar {...mySecretCard} />}
+                            </button>
+                        </div>
                     </div>
 
-                    <button
-                        onClick={drawCard}
-                        disabled={isRolling}
-                        className={`w-16 h-20 rounded-lg border-2 flex items-center justify-center bg-slate-800 overflow-hidden ${
-                            !mySecretCard
-                                ? 'border-dashed border-slate-500'
-                                : 'border-blue-500 shadow-md shadow-blue-500/30'
-                        }`}
-                    >
-                        {!mySecretCard
-                            ? <span className="text-2xl animate-pulse">❓</span>
-                            : <SpriteAvatar {...mySecretCard} />}
-                    </button>
-                </div>
-            </header>
+                    {/* Barra de Status */}
+                    <div className="flex justify-between items-center mb-4 relative z-10">
+                        <div className="text-sm bg-slate-800 py-1 px-3 rounded-full border border-slate-700">
+                            Restantes: <span className="font-bold text-blue-400">{25 - eliminated.size}</span>/25
+                        </div>
+                        <button onClick={resetGame} className="bg-blue-600 px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer hover:bg-blue-500">
+                            🔄 Novo Jogo
+                        </button>
+                    </div>
 
-            <div className="flex justify-between items-center mb-4 relative z-10">
-                <div className="text-sm bg-slate-800 py-1 px-3 rounded-full border border-slate-700">
-                    Restantes:{' '}
-                    <span className="font-bold text-blue-400">
-                        {25 - eliminated.size}
-                    </span>/25
-                </div>
+                    {/* Tabuleiro */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-w-6xl mx-auto w-full pb-10">
+                        {sortedCharacters.map((char) => {
+                            const isEliminated = eliminated.has(char.id);
+                            const isFlying = flying.has(char.id);
 
-                <button
-                    onClick={resetGame}
-                    className="bg-blue-600 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-500"
-                >
-                    🔄 Novo Jogo
-                </button>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-w-6xl mx-auto w-full pb-10">
-                {sortedCharacters.map(char => {
-                    const isEliminated = eliminated.has(char.id);
-                    const isFlying = flyingCardId === char.id;
-
-                    return (
-                        <motion.div
-                            key={char.id}
-                            layout
-                            ref={element => {
-                                cardRefs.current[char.id] = element;
-                            }}
-                            onClick={() => toggleEliminate(char.id)}
-                            initial={false}
-                            animate={{
-                                opacity: isFlying ? 0 : 1,
-                                scale: isEliminated ? 0.97 : 1,
-                                filter: isEliminated
-                                    ? 'grayscale(100%)'
-                                    : 'grayscale(0%)'
-                            }}
-                            transition={{
-                                layout: {
-                                    type: 'spring',
-                                    stiffness: 300,
-                                    damping: 28
-                                },
-                                duration: 0.25
-                            }}
-                            className="character-card relative cursor-pointer select-none rounded-xl"
-                        >
-                            <div className={`bg-slate-800 rounded-xl overflow-hidden border-2 flex flex-col aspect-square w-full h-full ${
-                                isEliminated
-                                    ? 'border-slate-700'
-                                    : 'border-slate-600'
-                            }`}>
-                                <div className="w-full h-full relative bg-slate-800 p-1">
-                                    <SpriteAvatar {...char} />
-                                </div>
-
-                                {isEliminated && (
-                                    <div className="absolute inset-0 bg-red-900/30 flex items-center justify-center rounded-xl">
-                                        <div className="text-white text-4xl drop-shadow-lg font-bold">
-                                            ❌
+                            return (
+                                <MotionDiv
+                                    key={char.id}
+                                    layout // desliza sozinha até a nova posição; as outras se reorganizam
+                                    onClick={() => toggleEliminate(char.id)}
+                                    onLayoutAnimationComplete={() => stopFlying(char.id)}
+                                    initial={false}
+                                    // zIndex fica no style (valor imediato) para a carta já sair por cima de todas
+                                    style={{ position: 'relative', zIndex: isFlying ? 50 : 1 }}
+                                    animate={{
+                                        scale: isFlying ? 1.12 : isEliminated ? 0.95 : 1,
+                                        opacity: isEliminated && !isFlying ? 0.5 : 1,
+                                        filter: isEliminated ? 'grayscale(100%)' : 'grayscale(0%)',
+                                        boxShadow: isFlying
+                                            ? '0 30px 40px -10px rgba(0,0,0,0.7), 0 0 28px rgba(148,163,184,0.45)'
+                                            : '0 0 0 0 rgba(0,0,0,0)'
+                                    }}
+                                    transition={{
+                                        layout: { type: 'spring', stiffness: 120, damping: 20, mass: 1 }, // mais lento = efeito de levitar
+                                        default: { duration: 0.35 }
+                                    }}
+                                    className="cursor-pointer select-none rounded-xl"
+                                >
+                                    <div className={`bg-slate-800 rounded-xl overflow-hidden border-2 flex flex-col aspect-square w-full h-full relative ${isEliminated ? 'border-slate-700' : 'border-slate-600'}`}>
+                                        <div className="w-full h-full relative bg-slate-800 p-1">
+                                            <SpriteAvatar {...char} />
                                         </div>
+                                        {isEliminated && (
+                                            <div className="absolute inset-0 bg-red-900/30 flex items-center justify-center rounded-xl">
+                                                <div className="text-white text-4xl drop-shadow-lg font-bold">❌</div>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                        </motion.div>
-                    );
-                })}
-            </div>
-        </div>
-    );
-}
+                                </MotionDiv>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        }
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
-</script>
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
 </body>
 </html>
