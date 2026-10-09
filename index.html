@@ -40,23 +40,15 @@
         ];
 
         const SpriteAvatar = ({ col, row }) => {
-            let posX = col * 25;
-            let posY = row * 25;
-            
-            // CORREÇÃO MÁGICA DA IA: Compensa o fato da arte ter mais céu no topo e ser espremida embaixo
-            if (row === 0) posY += 2.5; // Puxa o Enzo um pouco pra cima pra salvar o nome dele
-            if (row === 1) posY += 1.5; // Puxa a Laura um pouco pra não pegar a borda do Enzo
-            if (row === 2) posY += 0.5; // Ajuste fino no meio
-
+            // Matemática Pura: Sem gambiarras, 25% exato para cada carta!
             return (
-                <div className="w-full h-full overflow-hidden rounded-lg">
+                <div className="w-full h-full overflow-hidden">
                     <div
                         className="w-full h-full bg-no-repeat"
                         style={{
                             backgroundImage: `url('${SPRITE_URL}')`,
                             backgroundSize: "500% 500%",
-                            backgroundPosition: `${posX}% ${posY}%`,
-                            transform: 'scale(1.05)' // Dá um zoom de 5% em todas as cartas para cortar qualquer bordinha vazada dos vizinhos
+                            backgroundPosition: `${col * 25}% ${row * 25}%`
                         }}
                     ></div>
                 </div>
@@ -191,15 +183,15 @@
                                         layout: { duration: 1.2, ease: 'easeInOut' },
                                         default: { duration: 0.35 }
                                     }}
-                                    className="cursor-pointer select-none rounded-xl"
+                                    className="cursor-pointer select-none"
                                 >
-                                    {/* ATENÇÃO: Tirei o p-1 e o bg-slate-800 daqui para a imagem preencher 100% até a borda */}
-                                    <div className={`rounded-xl overflow-hidden border-2 flex flex-col aspect-square w-full h-full relative ${isEliminated ? 'border-slate-700' : 'border-slate-500'}`}>
+                                    {/* Mudei de rounded-xl para rounded-lg aqui, para não cortar o nome na curva! */}
+                                    <div className={`rounded-lg overflow-hidden border-2 flex flex-col aspect-square w-full h-full relative ${isEliminated ? 'border-slate-700' : 'border-slate-500'}`}>
                                         <div className="w-full h-full relative">
                                             <SpriteAvatar {...char} />
                                         </div>
                                         {isEliminated && (
-                                            <div className="absolute inset-0 bg-red-900/30 flex items-center justify-center rounded-xl z-20">
+                                            <div className="absolute inset-0 bg-red-900/30 flex items-center justify-center z-20">
                                                 <div className="text-white text-5xl drop-shadow-lg font-bold">❌</div>
                                             </div>
                                         )}
