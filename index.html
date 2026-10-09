@@ -31,6 +31,22 @@
 
         const SPRITE_URL = './sprite.png';
 
+        // ===== CALIBRAÇÃO DO SPRITE =====
+        // Tamanho de referência da imagem (só a proporção importa)
+        const IMG_W = 1294;
+        const IMG_H = 1216;
+
+        // [início, fim] de cada coluna e de cada linha, em pixels da imagem de referência.
+        // As linhas NÃO têm a mesma altura, por isso não dá para usar grade uniforme.
+        const COLS = [[2, 254], [258, 513], [517, 776], [782, 1037], [1041, 1292]];
+        const ROWS = [[2, 264], [268, 526], [529, 774], [777, 1007], [1011, 1214]];
+
+        // Quantos pixels cortar de cada lado para eliminar bordas/cantos dos vizinhos
+        const INSET = 5;
+
+        // Proporção das cartas na tela
+        const CARD_ASPECT = '1294 / 1216';
+
         const CHARACTERS = [
             { id: 1, nome: "Enzo", col: 0, row: 0 }, { id: 2, nome: "Sofia", col: 1, row: 0 }, { id: 3, nome: "Lucas", col: 2, row: 0 }, { id: 4, nome: "Alice", col: 3, row: 0 }, { id: 5, nome: "Pedro", col: 4, row: 0 },
             { id: 6, nome: "Laura", col: 0, row: 1 }, { id: 7, nome: "Felipe", col: 1, row: 1 }, { id: 8, nome: "Camila", col: 2, row: 1 }, { id: 9, nome: "Henrique", col: 3, row: 1 }, { id: 10, nome: "Beatriz", col: 4, row: 1 },
@@ -39,26 +55,23 @@
             { id: 21, nome: "Gabriel", col: 0, row: 4 }, { id: 22, nome: "Vitória", col: 1, row: 4 }, { id: 23, nome: "Arthur", col: 2, row: 4 }, { id: 24, nome: "Elisa", col: 3, row: 4 }, { id: 25, nome: "Miguel", col: 4, row: 4 }
         ];
 
-        // NOVO CÓDIGO DA CARTA: À Prova de Falhas
+        // Recorta exatamente o retângulo da carta usando background-size/position
         const SpriteAvatar = ({ col, row }) => {
+            const x = COLS[col][0] + INSET;
+            const w = COLS[col][1] - COLS[col][0] - INSET * 2;
+            const y = ROWS[row][0] + INSET;
+            const h = ROWS[row][1] - ROWS[row][0] - INSET * 2;
+
             return (
-                <div className="w-full h-full relative overflow-hidden rounded-lg">
-                    {/* Esse zoom de 2.5% impede que o pixel da carta do vizinho vaze */}
-                    <div className="w-full h-full relative origin-center" style={{ transform: 'scale(1.025)' }}>
-                        <img
-                            src={SPRITE_URL}
-                            alt="Personagem"
-                            /* max-w-none é essencial para o Tailwind permitir que a imagem cresça além da caixa */
-                            className="absolute max-w-none pointer-events-none"
-                            style={{
-                                width: '500%',
-                                height: '500%',
-                                left: `-${col * 100}%`,
-                                top: `-${row * 100}%`
-                            }}
-                        />
-                    </div>
-                </div>
+                <div
+                    className="w-full h-full rounded-xl"
+                    style={{
+                        backgroundImage: `url(${SPRITE_URL})`,
+                        backgroundRepeat: 'no-repeat',
+                        backgroundSize: `${(IMG_W / w) * 100}% ${(IMG_H / h) * 100}%`,
+                        backgroundPosition: `${(x / (IMG_W - w)) * 100}% ${(y / (IMG_H - h)) * 100}%`
+                    }}
+                />
             );
         };
 
@@ -68,7 +81,7 @@
             const [eliminated, setEliminated] = useState(new Set());
             const [mySecretCard, setMySecretCard] = useState(null);
             const [isRolling, setIsRolling] = useState(false);
-            const [flying, setFlying] = useState(new Set()); 
+            const [flying, setFlying] = useState(new Set());
             const timers = useRef({});
 
             const startFlying = (id) => {
@@ -102,7 +115,7 @@
             };
 
             const toggleEliminate = (id) => {
-                startFlying(id); 
+                startFlying(id);
                 setEliminated((prev) => {
                     const next = new Set(prev);
                     next.has(id) ? next.delete(id) : next.add(id);
@@ -147,7 +160,8 @@
                             <button
                                 onClick={drawCard}
                                 disabled={isRolling}
-                                className={`w-28 h-32 rounded-lg border-2 flex items-center justify-center bg-slate-800 overflow-hidden cursor-pointer ${!mySecretCard ? 'border-dashed border-slate-500' : 'border-blue-500 shadow-md shadow-blue-500/30'}`}
+                                style={{ aspectRatio: CARD_ASPECT }}
+                                className={`w-28 rounded-lg border-2 flex items-center justify-center bg-slate-800 overflow-hidden cursor-pointer ${!mySecretCard ? 'border-dashed border-slate-500' : 'border-blue-500 shadow-md shadow-blue-500/30'}`}
                             >
                                 {!mySecretCard ? <span className="text-2xl animate-pulse">❓</span> : <div className="w-full h-full"><SpriteAvatar {...mySecretCard} /></div>}
                             </button>
@@ -192,10 +206,11 @@
                                     }}
                                     className="cursor-pointer select-none"
                                 >
-                                    <div className={`rounded-lg overflow-hidden border-2 flex flex-col aspect-square w-full h-full relative ${isEliminated ? 'border-slate-700' : 'border-slate-500'}`}>
-                                        <div className="w-full h-full relative">
-                                            <SpriteAvatar {...char} />
-                                        </div>
+                                    <div
+                                        style={{ aspectRatio: CARD_ASPECT }}
+                                        className={`rounded-xl overflow-hidden border-2 w-full relative ${isEliminated ? 'border-slate-700' : 'border-slate-500'}`}
+                                    >
+                                        <SpriteAvatar {...char} />
                                         {isEliminated && (
                                             <div className="absolute inset-0 bg-red-900/30 flex items-center justify-center z-20">
                                                 <div className="text-white text-5xl drop-shadow-lg font-bold">❌</div>
