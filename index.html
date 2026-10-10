@@ -24,28 +24,22 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useRef } = React;
+        const { useState, useRef, useEffect } = React;
 
         const FM = window.Motion || window.FramerMotion;
         const MotionDiv = FM ? FM.motion.div : 'div';
 
-        const SPRITE_URL = './sprite.png';
+        // ===== SPRITE (todas as cartas têm o MESMO tamanho, então a conta é exata) =====
+        // O "?v=2" evita que o navegador/Vercel mostre o sprite antigo em cache.
+        const SPRITE_URL = './sprite.png?v=2';
 
-        // ===== CALIBRAÇÃO DO SPRITE =====
-        // Tamanho de referência da imagem (só a proporção importa)
-        const IMG_W = 1294;
-        const IMG_H = 1216;
-
-        // [início, fim] de cada coluna e de cada linha, em pixels da imagem de referência.
-        // As linhas NÃO têm a mesma altura, por isso não dá para usar grade uniforme.
-        const COLS = [[2, 254], [258, 513], [517, 776], [782, 1037], [1041, 1292]];
-        const ROWS = [[2, 264], [268, 526], [529, 774], [777, 1007], [1011, 1214]];
-
-        // Quantos pixels cortar de cada lado para eliminar bordas/cantos dos vizinhos
-        const INSET = 5;
-
-        // Proporção das cartas na tela
-        const CARD_ASPECT = '1294 / 1216';
+        const CW = 300;        // largura de cada cartinha no sprite
+        const CH = 400;        // altura de cada cartinha no sprite (formato em pé, 3:4)
+        const PAD = 8;         // margem de segurança em volta de cada cartinha
+        const STRIDE_X = CW + PAD * 2;   // 316
+        const STRIDE_Y = CH + PAD * 2;   // 416
+        const SW = STRIDE_X * 5;         // 1580 (largura total do sprite)
+        const SH = STRIDE_Y * 5;         // 2080 (altura total do sprite)
 
         const CHARACTERS = [
             { id: 1, nome: "Enzo", col: 0, row: 0 }, { id: 2, nome: "Sofia", col: 1, row: 0 }, { id: 3, nome: "Lucas", col: 2, row: 0 }, { id: 4, nome: "Alice", col: 3, row: 0 }, { id: 5, nome: "Pedro", col: 4, row: 0 },
@@ -55,21 +49,21 @@
             { id: 21, nome: "Gabriel", col: 0, row: 4 }, { id: 22, nome: "Vitória", col: 1, row: 4 }, { id: 23, nome: "Arthur", col: 2, row: 4 }, { id: 24, nome: "Elisa", col: 3, row: 4 }, { id: 25, nome: "Miguel", col: 4, row: 4 }
         ];
 
-        // Recorta exatamente o retângulo da carta usando background-size/position
+        // Mostra exatamente uma cartinha do sprite. Serve para o tabuleiro E para a carta sorteada.
+        // O tamanho vem sempre da largura do pai; a altura acompanha pela proporção (aspectRatio),
+        // então não há como a imagem esticar ou vazar para a carta vizinha.
         const SpriteAvatar = ({ col, row }) => {
-            const x = COLS[col][0] + INSET;
-            const w = COLS[col][1] - COLS[col][0] - INSET * 2;
-            const y = ROWS[row][0] + INSET;
-            const h = ROWS[row][1] - ROWS[row][0] - INSET * 2;
-
+            const px = PAD + col * STRIDE_X;
+            const py = PAD + row * STRIDE_Y;
             return (
                 <div
-                    className="w-full h-full rounded-xl"
                     style={{
+                        width: '100%',
+                        aspectRatio: `${CW} / ${CH}`,
                         backgroundImage: `url(${SPRITE_URL})`,
                         backgroundRepeat: 'no-repeat',
-                        backgroundSize: `${(IMG_W / w) * 100}% ${(IMG_H / h) * 100}%`,
-                        backgroundPosition: `${(x / (IMG_W - w)) * 100}% ${(y / (IMG_H - h)) * 100}%`
+                        backgroundSize: `${(SW / CW) * 100}% auto`,
+                        backgroundPosition: `${(px / (SW - CW)) * 100}% ${(py / (SH - CH)) * 100}%`
                     }}
                 />
             );
@@ -83,6 +77,16 @@
             const [isRolling, setIsRolling] = useState(false);
             const [flying, setFlying] = useState(new Set());
             const timers = useRef({});
+            const rollRef = useRef(null);
+
+            // Pré-carrega o sprite para a roleta não piscar na primeira vez
+            useEffect(() => {
+                const img = new Image();
+                img.src = SPRITE_URL;
+                return () => {
+                    if (rollRef.current) clearInterval(rollRef.current);
+                };
+            }, []);
 
             const startFlying = (id) => {
                 setFlying((prev) => new Set(prev).add(id));
@@ -100,15 +104,30 @@
                 });
             };
 
+            const pickRandom = (exceptId) => {
+                let c;
+                do {
+                    c = CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+                } while (c.id === exceptId);
+                return c;
+            };
+
             const drawCard = () => {
                 if (isRolling) return;
                 setIsRolling(true);
+
+                const TICKS = 16;
                 let counter = 0;
-                const interval = setInterval(() => {
-                    setMySecretCard(CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)]);
+                let last = mySecretCard ? mySecretCard.id : null;
+
+                rollRef.current = setInterval(() => {
+                    const c = pickRandom(last);
+                    last = c.id;
+                    setMySecretCard(c);
                     counter++;
-                    if (counter > 15) {
-                        clearInterval(interval);
+                    if (counter >= TICKS) {
+                        clearInterval(rollRef.current);
+                        rollRef.current = null;
                         setIsRolling(false);
                     }
                 }, 100);
@@ -124,6 +143,12 @@
             };
 
             const resetGame = () => {
+                // para a roleta se ela estiver girando
+                if (rollRef.current) {
+                    clearInterval(rollRef.current);
+                    rollRef.current = null;
+                }
+                setIsRolling(false);
                 Object.values(timers.current).forEach(clearTimeout);
                 setEliminated(new Set());
                 setMySecretCard(null);
@@ -139,9 +164,9 @@
             });
 
             return (
-                <div className="flex flex-col min-h-screen p-4">
+                <div className="flex flex-col min-h-screen p-3 sm:p-4">
                     {/* Header */}
-                    <div className="flex flex-col md:flex-row justify-between items-center bg-slate-800 p-4 rounded-xl shadow-lg mb-6 border border-slate-700 relative z-10">
+                    <div className="flex flex-col md:flex-row justify-between items-center bg-slate-800 p-4 rounded-xl shadow-lg mb-5 border border-slate-700 relative z-10">
                         <div>
                             <h1 className="text-2xl font-bold text-blue-400">👤 Quem é Quem?</h1>
                             <p className="text-sm text-slate-400 mt-1">
@@ -157,13 +182,24 @@
                                 </span>
                             </div>
 
+                            {/* Moldura = padding de 2px com cor de fundo (não mexe na proporção da carta) */}
                             <button
                                 onClick={drawCard}
                                 disabled={isRolling}
-                                style={{ aspectRatio: CARD_ASPECT }}
-                                className={`w-28 rounded-lg border-2 flex items-center justify-center bg-slate-800 overflow-hidden cursor-pointer ${!mySecretCard ? 'border-dashed border-slate-500' : 'border-blue-500 shadow-md shadow-blue-500/30'}`}
+                                className={`w-24 sm:w-28 p-[2px] rounded-xl cursor-pointer transition-shadow ${!mySecretCard ? 'bg-slate-500' : 'bg-blue-500 shadow-md shadow-blue-500/30'}`}
                             >
-                                {!mySecretCard ? <span className="text-2xl animate-pulse">❓</span> : <div className="w-full h-full"><SpriteAvatar {...mySecretCard} /></div>}
+                                <div className="rounded-[10px] overflow-hidden bg-slate-800">
+                                    {!mySecretCard ? (
+                                        <div
+                                            style={{ aspectRatio: `${CW} / ${CH}` }}
+                                            className="w-full flex items-center justify-center"
+                                        >
+                                            <span className="text-3xl animate-pulse">❓</span>
+                                        </div>
+                                    ) : (
+                                        <SpriteAvatar col={mySecretCard.col} row={mySecretCard.row} />
+                                    )}
+                                </div>
                             </button>
                         </div>
                     </div>
@@ -178,8 +214,8 @@
                         </button>
                     </div>
 
-                    {/* Tabuleiro */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-w-6xl mx-auto w-full pb-10">
+                    {/* Tabuleiro: 3 colunas no celular, para ver mais cartas de uma vez */}
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-3 max-w-6xl mx-auto w-full pb-10">
                         {sortedCharacters.map((char) => {
                             const isEliminated = eliminated.has(char.id);
                             const isFlying = flying.has(char.id);
@@ -204,16 +240,13 @@
                                         layout: { duration: 1.2, ease: 'easeInOut' },
                                         default: { duration: 0.35 }
                                     }}
-                                    className="cursor-pointer select-none"
+                                    className={`cursor-pointer select-none rounded-xl p-[2px] ${isEliminated ? 'bg-slate-700' : 'bg-slate-500'}`}
                                 >
-                                    <div
-                                        style={{ aspectRatio: CARD_ASPECT }}
-                                        className={`rounded-xl overflow-hidden border-2 w-full relative ${isEliminated ? 'border-slate-700' : 'border-slate-500'}`}
-                                    >
-                                        <SpriteAvatar {...char} />
+                                    <div className="rounded-[10px] overflow-hidden relative">
+                                        <SpriteAvatar col={char.col} row={char.row} />
                                         {isEliminated && (
                                             <div className="absolute inset-0 bg-red-900/30 flex items-center justify-center z-20">
-                                                <div className="text-white text-5xl drop-shadow-lg font-bold">❌</div>
+                                                <div className="text-white text-4xl sm:text-5xl drop-shadow-lg font-bold">❌</div>
                                             </div>
                                         )}
                                     </div>
